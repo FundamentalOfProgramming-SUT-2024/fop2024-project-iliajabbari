@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "profilemenu.c"
-#define FILE_NAME "usersdata.dat"
+
+#define FILE_NAME "usersdata.txt"
 void main_menu();
-int main(){
+/*int main(){
     initscr();             
     noecho();              
     keypad(stdscr, TRUE);  
@@ -13,8 +13,10 @@ int main(){
     main_menu();
     endwin();
     return 0;
-}
+}*/
 
+
+void settings_menu();
 void upload(){
     clear();
     curs_set(0);
@@ -47,7 +49,7 @@ void upload(){
     mvprintw(start_y+8,start_x-1,"############################");
     mvprintw(start_y+10,start_x+11,"100%c",'%');
     refresh();
-    napms(300);
+    napms(500);
     attroff(A_BOLD);
 }
 
@@ -67,7 +69,7 @@ mainmengoto:
         getmaxyx(stdscr, screen_height, screen_width);
         int start_x = (screen_width - 50) / 2 + 2;
         int start_y = (screen_height - 30) / 2 + 2;
-        char choices[4][50]={"                1.start the game","                  2.scoreboard","                   3.settings","               4.exit the program"};
+        char choices[4][50]={"                1.Start the game","                  2.scoreboard","                   3.settings","               4.exit the program"};
             init_pair(1,COLOR_RED,COLOR_BLACK);
             attron(COLOR_PAIR(1)); 
             attron(A_BOLD);
@@ -100,7 +102,10 @@ mainmengoto:
     }
     switch(choice){
         case 0:
+        if(!login_status){
             profile_menu();
+        }
+        else{return;}
             break;
         case 1:
             

@@ -2,13 +2,92 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#define FILE_NAME "usersdata.dat"
+#include <time.h>
+#define FILE_NAME "usersdata.txt"
+typedef struct{
+    char esm;
+    int lives;
+    int xplayer;
+    int yplayer;
+    
+    int vojood;
+}enemyy;
+typedef struct{
+    int x1;int x2;int y1;int y2;
+    int type;//1-10 normal 11-14 enchant 15-18 nightmare 19-20 treasure
+    enemyy* enemies;
+}room;
+typedef struct{
+    int tedad;
+    int* mande;
+}food;
+typedef struct{
+
+}dareramz;
+
+
+wchar_t weapon[5]={0x2692,0x1F5E1,0x1FA84,0x27B3,0x2694};
+wchar_t spell[3]={0x1F5F2,0x1F9EA,0x1F4A3};
+typedef struct{
+    int numtabaghe;
+    int xplayer;
+    int yplayer;
+    int level;
+    int gold;
+    int armor[5];
+    food ghaza[4];
+    int spells[3];
+    int masterk;
+    int hits;
+    int health;
+    int hunger;
+    char spells_activated[3];
+    int color;
+    int soraat;
+    int ghodrat;
+    time_t beginspell;
+    time_t endspell;
+    int dour;
+    int nazdik;
+    int selah_dardast;
+    int healing;
+}Player;
+typedef struct {
+    wchar_t a[500][500];
+    int tedad;
+    room* otagh;
+    int vojood_masterkey;
+   // int mal_kam;//maloum ya kamel
+    int chand;//t1-t2-t3-t4
+    
+   // unsigned char passdoor[9][];
+} tabaghe;
+
+
+void display_map(tabaghe *t, int sc_height, int sc_width);
+
+int* initialize_player(tabaghe* t);
+typedef struct {
+    tabaghe t1;
+    tabaghe t2;
+    tabaghe t3;
+    tabaghe t4;
+    tabaghe maloum;
+    int vaziatmaloum;
+    Player player;
+    int difficulty;
+} Bazi;
 typedef struct{
     long int point;
     long int gold;
     char username[50];
     char pass[50];
     char email[50];
+    char character;
+    int difficulty;
+    int tajrobe1;
+    int tajrobe2;
+    Bazi* games;
 }User;
 
 void save_user_data();
@@ -17,7 +96,8 @@ int is_username_taken();
 void draw_rectangle(int width, int height);
 void random_pass();
 int profile_menu();
-int main(){
+/*int main(){
+    srand(time(NULL));
     initscr();             
     noecho();              
     keypad(stdscr, TRUE);  
@@ -25,24 +105,38 @@ int main(){
     profile_menu();
     endwin();
     return 0;
-}
+}*/
 void save_user_data(User user) {
-    FILE *file = fopen(FILE_NAME, "ab");
+    FILE *file = fopen(FILE_NAME, "rb+");
     if (!file) {
-        mvprintw(1, 1, "Error: Unable to open file for writing.");
-        fclose(file);
-        refresh();
-        return;
-    } User temp_user;User* userr=&user;
-    while (fread(&temp_user, sizeof(User), 1, file)) {
-            if (strcmp(temp_user.username, userr->username) == 0) {
-                fseek(file, -sizeof(User), SEEK_CUR);
-                fwrite(userr, sizeof(User), 1, file);
-                break;
-            }
+        file = fopen(FILE_NAME, "wb+");
+        if (!file) {
+            mvprintw(1, 1, "Error: Unable to create file.");
+            refresh();
+            return;
         }
-        fclose(file);
+    }
+
+    User temp_user;
+    int user_found = 0;
+
+    while (fread(&temp_user, sizeof(User), 1, file)) {
+        if (strcmp(temp_user.username, user.username) == 0) {
+            fseek(file, -sizeof(User), SEEK_CUR);
+            fwrite(&user, sizeof(User), 1, file);
+            user_found = 1;
+            break;
+        }
+    }
+
+    if (!user_found) {
+        fwrite(&user, sizeof(User), 1, file);
+    }
+
+    fclose(file);
 }
+
+
 
 int is_username_taken(const char *username) {
     FILE *file = fopen(FILE_NAME, "rb");
@@ -61,7 +155,7 @@ int is_username_taken(const char *username) {
 }
 
 int is_info_correct(User a){
-     FILE *file = fopen(FILE_NAME, "rb");
+     FILE *file = fopen(FILE_NAME, "rb+");
     if (!file) {
         return 0; // Assume no users if file doesn't exist
     }
@@ -119,7 +213,7 @@ void sign_up() {
         mvgetstr(start_y + 1, start_x, user.username); // Get username
         noecho();
 
-        if (is_username_taken(user.username)) {
+        if (is_username_taken(user.username) || user.username[0]==0) {
             curs_set(0);
             mvprintw(start_y + 2, start_x, "Username already taken! Try again.");
             mvprintw(start_y+1,start_x,"                                     ");

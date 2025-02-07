@@ -4,83 +4,57 @@
 #include <time.h>
 #include <wchar.h>
 #include <locale.h>
-
-#define FILE_NAME "usersdata.dat"
+#include "profilemenu.c"
+#include "project.c"
+#define FILE_NAME "usersdata.txt"
 #define min(a,b) ((a<=b)? a:b)
 #define max(a,b) ((a>=b)? a:b)
 short int dirx[128]={0};
 short int diry[128]={0};
 char enem[5]="DFGSU";
 char enemlives[10]="0510152030";
+
+
+
 void initialize_arrs(){
    dirx['U']=-1;dirx['Y']=-1;dirx['H']=0;dirx['J']=-1;dirx['K']=1;dirx['L']=0;dirx['B']=1;dirx['N']=1;
 diry['U']=-1;diry['Y']=1;diry['H']=-1;diry['J']=0;diry['K']=0;diry['L']=1;diry['B']=-1;diry['N']=1;
 }
-typedef struct{
-    int x1;int x2;int y1;int y2;
-    int type;//1-10 normal 11-14 enchant 15-18 nightmare 19-20 treasure
-}room;
-typedef struct{
-    int tedad;
-    int mande;
-}food;
-typedef struct{
-
-}dareramz;
 
 typedef struct{
-    char esm;
-    int lives;
-    int xplayer;
-    int yplayer;
-    int soraat;
-    int vojood;
-}enemyy;
-wchar_t weapon[5]={0x2692,0x1F5E1,0x1FA84,0x27B3,0x2694};
-wchar_t spell[3]={0x1F5F2,0x1F9EA,0x1F4A3};
-typedef struct{
-    int numtabaghe;
-    int xplayer;
-    int yplayer;
-    int level;
-    int gold;
-    int armor[5];
-    food ghaza[4];
-    int spells[3];
-    int masterk;
-    int hits;
-    int health;
-    int hunger;
-    char spells_activated[3];
-    int color;
-}Player;
-typedef struct {
-    wchar_t a[300][300];
-    int tedad;
-    room* otagh;
-    int vojood_masterkey;
-   // int mal_kam;//maloum ya kamel
-    int chand;//t1-t2-t3-t4
-    enemyy* enemies;
-   // unsigned char passdoor[9][];
-} tabaghe;
-
-
-void display_map(tabaghe *t, int sc_height, int sc_width);
-
-int* initialize_player(tabaghe* t);
-typedef struct {
-    tabaghe t1;
-    tabaghe t2;
-    tabaghe t3;
-    tabaghe t4;
-    tabaghe maloum;
-    int vaziatmaloum;
-    Player player;
-    
-} Bazi;
+    char username[50];
+    int difficulty;
+    int tajrobe1;
+    int tajrobe2;
+    Bazi* games;
+}karbar;
 Bazi wwwwwwwwwwww;
 Bazi* bazi=&wwwwwwwwwwww;
+karbar karbarr;
+void init_karbar(){
+
+karbarr.tajrobe1=0;
+karbarr.tajrobe2=0;
+karbarr.games=malloc(10*sizeof(Bazi));
+}
+
+void initialize_food(Player* player) {
+    int food_elements = 10;
+    
+    for (int i = 0; i < 4; i++) {
+        player->ghaza[i].tedad = 0;  
+        player->ghaza[i].mande = malloc(food_elements * sizeof(int));
+        if (!player->ghaza[i].mande) {
+            fprintf(stderr, "Memory allocation failed for ghaza[%d].mande\n", i);
+            exit(EXIT_FAILURE);
+        }
+        for (int j = 0; j < food_elements; j++) {
+            player->ghaza[i].mande[j] = -1;
+        }
+    }
+}
+
+int spell_activation;
 void masiryab(int x1,int y1,int x2,int y2,int taraf,tabaghe* tt){
     srand(time(NULL));
     int o1=x2;
@@ -183,17 +157,26 @@ void mplayer(Player* player){
    player->numtabaghe=1;
    player->level=1;
    player->gold=0;
-   for(int i=0;i<5;i++){player->armor[i]=0;}
+   player->armor[0]=1;
+   for(int i=1;i<5;i++){player->armor[i]=0;}
    player->hits=0;
    player->health=100;
    player->hunger=100;
+   player->healing=1;
+   player->ghodrat=0;player->soraat=0;for(int i=0;i<3;i++){player->spells[i]=0;}
+   player->color=0;
+   player->masterk=0;
+   player->dour=-1;
+   player->nazdik=0;
+   player->selah_dardast=-1;
+   initialize_food(player);
 }
 
 void initialize_tabaghe(tabaghe *t) {
    t->vojood_masterkey=0;
-   t->enemies=calloc(50,sizeof(Player));
-    for (int i = 0; i < 300; i++) {
-        for (int j = 0; j < 300; j++) {
+   
+    for (int i = 0; i < 500; i++) {
+        for (int j = 0; j < 500; j++) {
             t->a[i][j] = ' ';
         }
     }
@@ -240,6 +223,8 @@ void make_floor(tabaghe *t) {
         t->otagh[o].y2=y2;
         t->otagh[o].x2=x2;
         t->otagh[o].y1=y1;
+        t->otagh[o].enemies=malloc(50*sizeof(enemyy));
+        t->otagh[o].type=rand()%20;
         if (x1 + x2 >= sc_width - 1) x2 = sc_width - x1 - 2;
         if (y1 + y2 >= sc_height - 1) y2 = sc_height - y1 - 2;
         int tedad=rand()%2 + 1;
@@ -388,8 +373,12 @@ void make_floor(tabaghe *t) {
                 int x=x1+2+rand()%(x2-4);
                 int y=y1+2+rand()%(y2-4);
                 if(t->a[x][y]=='.' && t->a[x+1][y]=='.'){
-                    t->a[x][y]=0x1F34E;//food
-                    t->a[x+1][y]==0;
+                    //food
+                    int u=rand()%4;
+                    if(u==1 || u==0){t->a[x][y]=0x1F34E;}
+                    else if(u==2){t->a[x][y]=0x1F34A;}
+                    else if(u==3){t->a[x][y]=0x1F349;}
+                    t->a[x+1][y]==u;
                     break;
                 }
                 else{
@@ -411,6 +400,27 @@ void make_floor(tabaghe *t) {
             failn++;
          }
         }
+        for(int i=0;i<1;i++){
+            room* ee=&t->otagh[o];
+            failn=0;
+            while(1){
+                if(failn>15){ee->enemies[i].vojood=0;break;}
+                int x=rand()%ee->x2;
+                int y=rand()%ee->y2;
+                if(t->a[ee->x1+x][ee->y1+y]=='.'){
+                    ee->enemies[i].xplayer=ee->x1+x;ee->enemies[i].yplayer=ee->y1+y;
+                    int t=rand()%5;
+                    ee->enemies[i].esm=enem[t];
+                    ee->enemies[i].lives=enemlives[t];
+                    ee->enemies[i].vojood=1;
+                    break;
+                }
+                else{failn++;}
+            }
+            
+            
+        }
+        
          if(0<o && o<3){
         if (j != 0) {
     room *aa = t->otagh + o;
@@ -442,12 +452,15 @@ if (i != 0) {
    masiryab(x_a, y_a, x_b, y_b, 0, t);
 }  
    }
-   initialize_player(t);
+   //initialize_player(t);
 }
 
 void namayesh_naghshe(Bazi* bazi){
     if(bazi->vaziatmaloum==0){
         bazi->vaziatmaloum=1;
+    }
+    else if(bazi->vaziatmaloum==1){
+        bazi->vaziatmaloum=0;
     }
 }
 tabaghe* ff(Bazi* bazi,int h){if(h==1){return &bazi->t1;}
@@ -479,14 +492,19 @@ int evaluate_move(char c,tabaghe* t,Player player){
 }
 
 
-void otaghenabard(Player* player){
+ void weapon_menu(Bazi* bazi);
+  void partabe_tir(Bazi* bazi);
+  void enem_move(tabaghe* t,Player* player);
+
+int otaghenabard(Player* player){
     clear();int x,y;
     getmaxyx(stdscr,y,x);
     x/=3;y/=3;
-    enemyy en[3];
-    char a[300][300];
-    for(int i=0;i<300;i++){
-        for(int j=0;j<300;j++){
+    tabaghe* t;
+    enemyy enemy;
+    char a[500][500];
+    for(int i=0;i<500;i++){
+        for(int j=0;j<500;j++){
             a[i][j]='E';
         }
     }
@@ -499,21 +517,21 @@ void otaghenabard(Player* player){
     for(int i=0;i<y;i++){a[x][i+y]='|';a[2*x][i+y]='|';}
     a[x][y]='_';a[2*x][y]='_';a[x][2*y]='|';a[2*x][2*y]='|';
     int o=rand()%5;
-    en[0].esm=enem[o];en[0].xplayer=x+1;en[0].yplayer=y+1;en[0].vojood=1;en[0].soraat=1;en[0].lives=(enemlives[2*o]-48)*10+(enemlives[2*o+1]-48);
-    o=rand()%5;
-    en[1].esm=enem[o];en[1].xplayer=2*x-1;en[1].yplayer=y+1;en[1].vojood=1;en[1].soraat=1;en[1].lives=(enemlives[2*o]-48)*10+(enemlives[2*o+1]-48);
-    o=rand()%5;
-    en[2].esm=enem[o];en[2].xplayer=x+1;en[2].yplayer=2*y-1;en[2].vojood=1;en[2].soraat=1;en[2].lives=(enemlives[2*o]-48)*10+(enemlives[2*o+1]-48);
-    player->xplayer=2*x-1;player->yplayer=2*y-1;
+    enemy.esm=enem[o];enemy.xplayer=x+1;enemy.yplayer=y+1;enemy.vojood=1;enemy.lives=(enemlives[2*o]-48)*10+(enemlives[2*o+1]-48);
+   player->xplayer=2*x-1;player->yplayer=2*y-1;
     while(1){
+        if(enemy.vojood==0){
+            return 1;
+        }
+        if(player->health<=0){return 0;}
         for(int i=0;i<x+1;i++){
             for(int j=0;j<y+1;j++){
                 mvprintw(y+j,x+i,"%c",a[i+x][j+y]);
             }
         }
-        for(int i=0;i<3;i++){
-            mvprintw(en[i].yplayer,en[i].xplayer,"%c",en[i].esm);
-        }
+        
+            mvprintw(enemy.yplayer,enemy.xplayer,"%c",enemy.esm);
+        
         attron(COLOR_PAIR(player->color));
         mvprintw(player->yplayer,player->xplayer,"P");
         attroff(COLOR_PAIR(player->color));
@@ -522,14 +540,63 @@ void otaghenabard(Player* player){
         if(c=='Y' || c=='y' || c=='U' || c=='u' || c=='H' || c=='h' || c=='J' || c=='j' || c=='K' || c=='k' || c=='L' || c=='l' || c=='B' || c=='b' || c=='N' || c=='n'){
             initialize_arrs();
             if(c>96){c-=32;}
-            if(!((player->xplayer+dirx[c]==en[0].xplayer && player->yplayer+diry[c]==en[0].yplayer) || (player->xplayer+dirx[c]==en[1].xplayer && player->yplayer+diry[c]==en[1].yplayer) || (player->xplayer+dirx[c]==en[2].xplayer && player->yplayer+diry[c]==en[2].yplayer) ||a[player->xplayer+dirx[c]][player->yplayer+diry[c]]=='|' || a[player->xplayer+dirx[c]][player->yplayer+diry[c]]=='_')){
+            if(!((player->xplayer+dirx[c]==enemy.xplayer && player->yplayer+diry[c]==enemy.yplayer) || (player->xplayer+dirx[c]==enemy.xplayer && player->yplayer+diry[c]==enemy.yplayer) || (player->xplayer+dirx[c]==enemy.xplayer && player->yplayer+diry[c]==enemy.yplayer) ||a[player->xplayer+dirx[c]][player->yplayer+diry[c]]=='|' || a[player->xplayer+dirx[c]][player->yplayer+diry[c]]=='_')){
                 player->xplayer+=dirx[c];
                 
                 player->yplayer+=diry[c];
-            }
-            
+            }//
+            int x1=player->xplayer,y1=player->yplayer;
+            if(x1-1<=enemy.xplayer && x1+1>=enemy.xplayer){
+        if(y1-1<=enemy.yplayer && y1+1>=enemy.yplayer){
+            int i;
+            for(i=0;i<5;i++){if(enem[i]==enemy.esm){break;}}
+            player->health-=10;
+        }
+    }
+    if(enemy.yplayer>y1){
+        enemy.yplayer--;
+        
+    
+        
+    }
+    else if(enemy.yplayer<y1){
+     
+       
+        enemy.yplayer++;
+        
+      
+        
+    }
+    else if(enemy.yplayer==y1){
+    if(enemy.xplayer>x1){
+    
+        enemy.xplayer--;
+        
+        
+        
+    }
+    else if(enemy.xplayer<x1){
+        
+        enemy.xplayer++;
+        
+        
+        
+    }
+    }
 
         }
+        else if(c=='I' || c=='i'){
+            weapon_menu(bazi);
+            continue;
+        }
+        else if(c=='W'){
+            player->selah_dardast=-1;
+        }
+        else if(c==' '){
+            partabe_tir(bazi);
+            enem_move(t,player);
+        }
+        
     }
     
 }
@@ -540,6 +607,7 @@ void food_menu(Bazi* bazi){
     int x,y;
     getmaxyx(stdscr,y,x);
     x/=3;y/=3;
+    curs_set(0);
     for(int i=0;i<=x;i++){
         mvprintw(y,i+x,"_");
         mvprintw(2*y,i+x,"_");
@@ -572,56 +640,441 @@ void food_menu(Bazi* bazi){
     while(1){
         c=getch();
         if(c=='1'){
-            int o=rand()%2;
-            if(o){
-                if(player->ghaza[0].tedad==0){o=0;}
-                else{
-                    player->ghaza[0].tedad-=1;
-                    
-                }
+            int i=0;
+            while(player->ghaza[0].mande[i]==-1){i++;}
+            if(player->ghaza[0].mande[i]>120){
+                player->health-=15;
+                player->ghaza[0].mande[i]=-1;
+            }
+            else{
+                player->hunger=min(100,player->hunger+15);
+                player->ghaza[0].mande[i]=-1;
             }
             break;
         }
         else if(c=='2'){
-
+            int i=0;
+            while(player->ghaza[1].mande[i]==-1){i++;}
+            if(player->ghaza[1].mande[i]>120){
+                player->hunger=min(100,player->hunger+15);
+                
+                player->ghaza[1].mande[i]=-1;
+            }
+            else{
+                player->hunger=min(100,player->hunger+15);
+                player->soraat=1;
+                player->ghaza[1].mande[i]=-1;
+            }
             break;
         }
         else if(c=='3'){
-
+            int i=0;
+            while(player->ghaza[1].mande[i]==-1){i++;}
+            if(player->ghaza[1].mande[i]>120){
+                player->hunger=min(100,player->hunger+15);
+                
+                player->ghaza[1].mande[i]=-1;
+            }
+            else{
+                player->hunger=min(100,player->hunger+15);
+                player->ghodrat=1;
+                player->ghaza[1].mande[i]=-1;
+            }
             break;
         }
+        else if(c=='Q' || c=='q'){break;}
     }
    /* while(1){
         if(s==20){break;}
-    napms(300);
+    napms(500);
     s++;
     mvprintw(y+11,x+6+a," ");
     refresh();
-    napms(300);
+    napms(500);
     mvprintw(y+11,x+6+a,"#");
     refresh();
     
     }*/
     
-    getch();
+    
 }
 
 
-void keym(Bazi* bazi){
+void weapon_menu(Bazi* bazi){
+    clear();
+    Player* player=&bazi->player;
+    int x,y;
+    getmaxyx(stdscr,y,x);
+    x/=3;y/=3;
+    curs_set(0);
+    for(int i=0;i<=x;i++){
+        mvprintw(y,i+x,"_");
+        mvprintw(2*y,i+x,"_");
+    }
+    for(int j=0;j<=y;j++){
+        mvprintw(j+y,x,"|");
+        mvprintw(j+y,2*x,"|");
+    }
+    mvprintw(y,x,"_");mvprintw(y,2*x,"_");
+    mvprintw(y+1,x+1,"WEAPON");
+    for(int i=0;i<x-12;i++){mvprintw(y+1,x+7+i,".");}
+    mvprintw(y+1,2*x-5,"COUNT");
+    mvprintw(y+2,x+1,"MACE");
+    for(int i=0;i<x-8;i++){mvprintw(y+2,x+5+i,".");}
+    mvprintw(y+2,2*x-3,"inf");
+    mvprintw(y+3,x+1,"DAGGER");
+    for(int i=0;i<x-10;i++){mvprintw(y+3,x+7+i,".");}
+    mvprintw(y+3,2*x-3,"%d",player->armor[1]);
+    mvprintw(y+4,x+1,"MAGIC WAND");
+    for(int i=0;i<x-14;i++){mvprintw(y+4,x+11+i,".");}
+    mvprintw(y+4,2*x-3,"%d",player->armor[2]);
+    mvprintw(y+5,x+1,"NORMAL ARROW");
+    for(int i=0;i<x-16;i++){mvprintw(y+5,x+13+i,".");}
+    mvprintw(y+5,2*x-3,"%d",player->armor[3]);
+    mvprintw(y+6,x+1,"SWORD");
+    for(int i=0;i<x-7;i++){mvprintw(y+6,x+6+i,".");}
+    mvprintw(y+6,2*x-3,"%d",player->armor[4]);
+    char ww[5][15]={"MACE","DAGGER","MAGIC WAND","NORMAL ARROW","SWORD"};
+    if(player->selah_dardast>=0){
+    mvprintw(y+8,x+x/2-8,"DEFAULT: %s",ww[player->selah_dardast]);}
+    else{mvprintw(y+8,x+x/2-8,"DEFAULT: %s",ww[0]);}
+    while(1){
+        char c=getch();
+        if(c=='1' || c=='5'){
+            if(player->armor[c-49]==0){
+                attron(COLOR_PAIR(1));mvprintw(0,0,"NO SUCH ARMOR EXISTS");attroff(COLOR_PAIR(1));
+                napms(3000);
+                break;
+            }
+            if(player->selah_dardast!=(-1)){
+                attron(COLOR_PAIR(1));mvprintw(0,0,"FIRST PUT AWAY THE ARMOR IN YOUR HANDS");attroff(COLOR_PAIR(1));
+                napms(3000);
+                break;
+            }
+                player->selah_dardast=c-49;
+                break;
+            
+        }
+        else if(c=='2' || c=='3' || c=='4'){
+            player->selah_dardast=c-49;
+            break;
+        }
+        else if(c=='Q' || c=='q'){break;}
+        else{attron(COLOR_PAIR(1));mvprintw(0,0,"INVALID COMMAND");attroff(COLOR_PAIR(1));}
+        refresh();
+        napms(3000);
+        mvprintw(0,0,"               ");
+        
+    }
+}
+
+
+void spell_menu(Bazi* bazi){
+    clear();
+    Player* player=&bazi->player;
+    int x,y;
+    getmaxyx(stdscr,y,x);
+    x/=3;y/=3;
+    curs_set(0);
+    for(int i=0;i<=x;i++){
+        mvprintw(y,i+x,"_");
+        mvprintw(2*y,i+x,"_");
+    }
+    for(int j=0;j<=y;j++){
+        mvprintw(j+y,x,"|");
+        mvprintw(j+y,2*x,"|");
+    }
+    mvprintw(y,x,"_");mvprintw(y,2*x,"_");
+    mvprintw(y+1,x+1,"SPELL");
+    for(int i=0;i<x-11;i++){mvprintw(y+1,x+6+i,".");}
+    mvprintw(y+1,2*x-5,"COUNT");
+    mvprintw(y+2,x+1,"HEALTH");
+    for(int i=0;i<x-9;i++){mvprintw(y+2,x+7+i,".");}
+    mvprintw(y+2,2*x-2,"%d",player->spells[1]);
+    mvprintw(y+3,x+1,"SPEED");
+    for(int i=0;i<x-8;i++){mvprintw(y+3,x+6+i,".");}
+    mvprintw(y+3,2*x-2,"%d",player->spells[0]);
+    mvprintw(y+4,x+1,"DAMAGE");
+    for(int i=0;i<x-8;i++){mvprintw(y+4,x+6+i,".");}
+    mvprintw(y+4,2*x-2,"%d",player->spells[2]);
+    while(1){
+        char c=getch();
+        if(player->spells_activated[0] || player->spells_activated[1] || player->spells_activated[2]){
+            attron(COLOR_PAIR(1));mvprintw(0,0,"YOU CAN'T ACTIVATE TWO SPELLS AT THE SAME TIME");attroff(COLOR_PAIR(1));
+            napms(3000);
+            break;
+        }
+        if(c=='1'){
+            spell_activation=0;
+            player->spells[1]--;
+            player->healing++;
+
+            break;
+        }
+        else if(c=='2'){
+            spell_activation=0;
+            player->spells[0]--;
+            player->soraat=1;
+            break;
+        }
+        else if(c=='3'){
+            spell_activation=0;
+            player->spells[2]--;
+            player->ghodrat=1;
+            break;
+        }
+        else if(c=='Q' || c=='q'){
+            break;
+        }
+
+    }
+}
+
+int find_otagh(tabaghe* t,int x,int y){
+    for(int i=0;i<t->tedad;i++){
+        if(t->otagh[i].x1<=x && x<=t->otagh[i].x1+t->otagh[i].x2){
+            if(t->otagh[i].y1<=y && y<=t->otagh[i].y1+t->otagh[i].y2){
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+int damages[5]={5,12,15,5,10};
+void evaluate_armor_move(char c,room* otagh,int x,int y,int arnum,tabaghe* t){
+    int q,w;
+    initialize_arrs();
+    getmaxyx(stdscr,q,w);
+    while(1){
+        display_map(t,q,w);
+        if(t->a[x+dirx[c]][y+diry[c]]=='O' || t->a[x+dirx[c]][y+diry[c]]=='+' || t->a[x+dirx[c]][y+diry[c]]=='_' || t->a[x+dirx[c]][y+diry[c]]=='|'){
+            attron(COLOR_PAIR(1));mvprintw(0,0,"MOVE NOT ALLOWED");attroff(COLOR_PAIR(1));
+            t->a[x][y]='W';
+            refresh();
+            napms(3000);
+            mvprintw(0,0,"________________");
+            refresh();
+            break;
+        }
+        else{
+            x+=dirx[c];
+            y+=diry[c];
+            mvprintw(y,x,"%lc",weapon[arnum]);
+            refresh();
+            napms(100);
+        }
+        for(int i=0;i<3;i++){
+            if(otagh->enemies[i].xplayer>=x-1 && otagh->enemies[i].xplayer<=x+1){
+                if(otagh->enemies[i].yplayer>=y-1 && otagh->enemies[i].yplayer<=y+1){
+                    otagh->enemies[i].lives-=damages[arnum];
+                    if(otagh->enemies[i].lives<=0){otagh->enemies[i].vojood=0;}
+                    break;
+                }
+            }
+        }
+    }
+}
+void partabe_tir(Bazi* bazi){
+    Player* player=&bazi->player;
+    tabaghe* t;
+    if(player->numtabaghe==1){t=&bazi->t1;}
+    if(player->numtabaghe==2){t=&bazi->t2;}
+    if(player->numtabaghe==3){t=&bazi->t3;}
+    if(player->numtabaghe==4){t=&bazi->t4;}
+    int d=find_otagh(t,player->xplayer,player->yplayer);
+    room* ott;
+    if(player->selah_dardast==-1){
+        attron(COLOR_PAIR(1));
+        mvprintw(0,0,"CHOOSE ARMOR(PRESS \"E\" BUTTON)");attroff(COLOR_PAIR(1));
+        refresh();
+        napms(3000);
+        mvprintw(0,0,"________________________________");
+        refresh();
+    }
+    if(d>=0){
+        ott=&t->otagh[d];
+
+    if(player->selah_dardast==4){
+        player->armor[player->selah_dardast]--;
+        if(!player->armor[player->selah_dardast]){
+            player->selah_dardast=-1;
+        }
+        for(int i=0;i<3;i++){
+            int x=player->xplayer,y=player->yplayer;
+            if(ott->enemies[i].xplayer>=x-1 && ott->enemies[i].xplayer<=x+1){
+                if(ott->enemies[i].yplayer>=y-1 && ott->enemies[i].yplayer<=y+1){
+                    ott->enemies[i].lives-=10;
+                    if(ott->enemies[i].lives<=0){ott->enemies[i].vojood=0;}
+                }
+            }
+        }
+    }
+    else if(player->selah_dardast==1 || player->selah_dardast==2 || player->selah_dardast==3){
+        char c=getch();
+        player->armor[player->selah_dardast]--;
+        if(!player->armor[player->selah_dardast]){
+            player->selah_dardast=-1;
+        }
+        if(c>96){c-=32;}
+        if(c=='H' || c=='J' || c=='K' || c=='L' || c=='Y' || c=='U' || c=='B' || c=='N'){
+        evaluate_armor_move(c,ott,player->xplayer,player->yplayer,player->selah_dardast,t);
+        }
+    }
+    if(player->selah_dardast==0){
+        for(int i=0;i<3;i++){
+            int x=player->xplayer,y=player->yplayer;
+            if(ott->enemies[i].xplayer>=x-1 && ott->enemies[i].xplayer<=x+1){
+                if(ott->enemies[i].yplayer>=y-1 && ott->enemies[i].yplayer<=y+1){
+                    ott->enemies[i].lives-=5;
+                    if(ott->enemies[i].lives<=0){ott->enemies[i].vojood=0;}
+                }
+            }
+        }
+    }
+    }
+}
+
+int move_eachenemy(int x1, int y1,enemyy* enemy,tabaghe* t){
+    if(enemy->vojood==0){return 0;}
+    if(x1-1<=enemy->xplayer && x1+1>=enemy->xplayer){
+        if(y1-1<=enemy->yplayer && y1+1>=enemy->yplayer){
+            return 1;
+        }
+    }
+    if(enemy->yplayer>y1){
+        char c=t->a[enemy->yplayer-1][enemy->xplayer];
+        if(c!='_' && c!='O' && c!='|'){
+        enemy->yplayer--;
+        return 0;
+        }
+        
+    }
+    if(enemy->yplayer<y1){
+        char c=t->a[enemy->yplayer+1][enemy->xplayer];
+        if(c!='_' && c!='O' && c!='|'){
+        enemy->yplayer++;
+        return 0;
+        }
+        
+    }
+    if(enemy->xplayer>x1){
+        char c=t->a[enemy->yplayer][enemy->xplayer-1];
+        if(c!='_' && c!='O' && c!='|'){
+        enemy->xplayer--;
+        return 0;
+        }
+        
+    }
+    if(enemy->xplayer<x1){
+        char c=t->a[enemy->yplayer][enemy->xplayer+1];
+        if(c!='_' && c!='O' && c!='|'){
+        enemy->xplayer++;
+        return 0;
+        }
+        
+    }
+return 0;
+}
+
+
+void enem_move(tabaghe* t,Player* player){
+    int u=find_otagh(t,player->xplayer,player->yplayer);
+    if(u!=(-1)){
+    room* e=&t->otagh[u];
+    for(int i=0;i<3;i++){
+        int k=move_eachenemy(player->xplayer,player->yplayer,&e->enemies[i],t);
+        if(k){
+            int j;
+            for(j=0;j<5;j++){if(e->enemies[i].esm==enem[j]){break;}}
+            player->health-=10;
+
+        }
+    }
+    }
+}
+
+void make_naghse_shorou(tabaghe* t,tabaghe* tnam,int x,int y){
+    int h=find_otagh(t,x,y);
+    *tnam=*t;
+    room* d=&t->otagh[h];
+    for(int i=0;i<500;i++){
+        for(int j=0;j<500;j++){
+            tnam->a[i][j]=' ';
+        }
+    }
+    for(int i=0;i<3;i++){
+        tnam->otagh[h].enemies[i].vojood=0;
+    }
+    for(int i=0;i<=d->x2;i++){
+        for(int j=0;j<=d->y2;j++){
+            tnam->a[i+d->x1][j+d->y1]=t->a[i+d->x1][j+d->y1];
+        }
+    }
+    
+    
+    int sc_height, sc_width;
+    getmaxyx(stdscr, sc_height, sc_width);
+
+   
+    for (int i = 0; i <= sc_width; i++) {
+        tnam->a[i][0] = '_';
+        tnam->a[i][sc_height - 1] = '_';
+    }
+    for (int i = 1; i < sc_height; i++) {
+        tnam->a[0][i] = '|';
+        tnam->a[sc_width - 1][i] = '|';
+    }
+
+}
+void lose_game();
+
+int keym(Bazi* bazi){
     int x,y;
     getmaxyx(stdscr,y,x);
     Player* player=&bazi->player;
     int nt=player->numtabaghe;
+    make_naghse_shorou(&bazi->t1,&bazi->maloum,player->xplayer,player->yplayer);
+    time_t beginloop=time(NULL);
+    time_t endloop=time(NULL);
+    time_t duration;
+    int bord=0;
+    int soratt=1;
     while(1){
-        tabaghe* t=&bazi->t1;//should be fixed
-        if(bazi->vaziatmaloum==0){display_map(t,y,x);}
+        if(endloop!=beginloop){
+            double d=difftime(endloop,beginloop);
+            mvprintw(0,0,"%lf",d);
+            for(int i=0;i<4;i++){
+                if(player->ghaza[i].tedad>0){
+                player->ghaza[i].mande+=(int)d/player->ghaza[i].tedad;}
+            }
+            player->health=min(100,player->health+(d/0.1)*player->healing);
+            spell_activation+=d;
+            if(d>30){soratt=1;player->soraat=0;player->healing=1;}
+            karbarr.tajrobe2+=d;
+            beginloop=endloop;
+        }
+        tabaghe* t;
+        if(player->numtabaghe==1){t=&bazi->t1;}
+        if(player->numtabaghe==2){t=&bazi->t2;}
+        if(player->numtabaghe==3){t=&bazi->t3;}
+        if(player->numtabaghe==4){t=&bazi->t4;}
+        if(bazi->vaziatmaloum==0){display_map(&bazi->maloum,y,x);}
+        
         else if(bazi->vaziatmaloum==1){display_map(t,y,x);}
+        init_pair(4,COLOR_RED,COLOR_BLACK);
+        attron(COLOR_PAIR(4));
+        getmaxyx(stdscr,y,x);
+        mvprintw(y-1,x/2-18,"HEALTH: %d   Level: %d/4     Gold: %d",player->health,player->level,player->gold);
+        refresh();
+        attroff(COLOR_PAIR(4));
         char c=getch();
-        if(c=='Q' || c=='q'){break;}
-        else if(c=='M' || c=='m'){namayesh_naghshe(bazi);continue;}
+        if(c=='Q' || c=='q'){bord=2;break;}
+        else if(c=='M'){namayesh_naghshe(bazi);continue;}
         else if(c=='Y' || c=='y' || c=='U' || c=='u' || c=='H' || c=='h' || c=='J' || c=='j' || c=='K' || c=='k' || c=='L' || c=='l' || c=='B' || c=='b' || c=='N' || c=='n'){
             initialize_arrs();
             if(c>96){c-=32;}
+            for(int i=0;i<soratt;i++){
             int k=evaluate_move(c,t,*player);
             if(k){
                 player->xplayer+=dirx[c];
@@ -634,46 +1087,141 @@ void keym(Bazi* bazi){
                 if(k==spell[1]){player->spells[1]++;}
                 if(k==spell[2]){player->spells[2]++;}
                 if(k==0x25B3){player->masterk++;}
-                if(k==0x1F34E){int u=rand()% 4; player->ghaza[u].tedad++;}
+                if(k==0x1F34E){int u=rand()% 2;int y[2]={0,3}; player->ghaza[y[u]].tedad++;}
+                if(k==0x1F34A){ player->ghaza[1].tedad++;}
+                if(k==0x1F349){player->ghaza[2].tedad++;}
                 if(k==0x1F4B0){player->gold++;}
             }
+            if(t->a[player->xplayer][player->yplayer]=='+' || t->a[player->xplayer][player->yplayer]=='#'){
+                for(int i=-1;i<2;i++){
+                    for(int j=-1;j<2;j++){
+                        if(t->a[player->xplayer+i][player->yplayer+j]=='#' || t->a[player->xplayer+i][player->yplayer+j]=='+'){
+                        bazi->maloum.a[player->xplayer+i][player->yplayer+j]=t->a[player->xplayer+i][player->yplayer+j];}
+                    }
+                }
+            }
+            bazi->maloum.a[player->xplayer][player->yplayer]=t->a[player->xplayer][player->yplayer];
+            if(t->a[player->xplayer][player->yplayer]=='+'){
+                int u=find_otagh(t,player->xplayer,player->yplayer);
+                if(u!=(-1)){
+                    room q=t->otagh[u];
+                    for(int i=0;i<=q.x2;i++){
+                        for(int j=0;j<=q.y2;j++){
+                            bazi->maloum.a[i+q.x1][j+q.y1]=t->a[i+q.x1][j+q.y1];
+                        }
+                    }
+                }
+            }
+            
+            
+            }
+            for(int i=0;i<which_user.difficulty;i++){
+                enem_move(t,player);
+            }
+            
 
         }
-        else if(c=='E' || c=='e'){
+        else if(c=='P'){
+            if(soratt==2){soratt=1;}
+            else if(soratt==1){if(player->soraat){soratt=2;}}
+        }
+        else if(c=='E' ){
             food_menu(bazi);
             continue;
         }
         else if(c=='I' || c=='i'){
-            //weapon_manu(bazi);
+            weapon_menu(bazi);
             continue;
         }
         else if(c=='V' || c=='v'){
-            //spell_menu(bazi);
+            spell_menu(bazi);
             continue;
         }
         else if(c=='<'){
             if(t->a[player->xplayer][player->yplayer]=='<'){
-
+                if(player->numtabaghe==4){bord=1;}
+                player->numtabaghe++;
+                player->level=max(player->numtabaghe+1,player->level);
+                if(player->numtabaghe==2){
+                make_naghse_shorou(&bazi->t2,&bazi->maloum,player->xplayer,player->yplayer);
+                bazi->t2.a[player->xplayer][player->yplayer]='>';}
+                if(player->numtabaghe==3){
+                make_naghse_shorou(&bazi->t3,&bazi->maloum,player->xplayer,player->yplayer);
+                bazi->t3.a[player->xplayer][player->yplayer]='>';}
+                if(player->numtabaghe==4){
+                make_naghse_shorou(&bazi->t4,&bazi->maloum,player->xplayer,player->yplayer);
+                bazi->t4.a[player->xplayer][player->yplayer]='>';}
             }
+            
         }
         else if(c=='>'){
-            if(t->a[player->xplayer][player->yplayer]=='<'){
-
+            if(t->a[player->xplayer][player->yplayer]=='>'){
+                player->numtabaghe--;
+                if(player->numtabaghe==1){bazi->maloum=bazi->t1;}
+                if(player->numtabaghe==2){bazi->maloum=bazi->t2;}
+                if(player->numtabaghe==3){bazi->maloum=bazi->t3;}
             }
         }
+        
+        else if(c=='W'){
+            player->selah_dardast=-1;
+        }
+        else if(c==' '){
+            partabe_tir(bazi);
+            enem_move(t,player);
+        }
+        else if(c=='a'){if(player->armor[3]>0){player->selah_dardast=3;} else{attron(COLOR_PAIR(1));mvprintw(0,0,"YOU DON'T HAVE SUCH AN ARMOR");refresh();attroff(COLOR_PAIR(1));napms(3000);mvprintw(0,0,"___________________________________");}}
+        else if(c=='s'){if(player->armor[4]>0){player->selah_dardast=4;} else{attron(COLOR_PAIR(1));mvprintw(0,0,"YOU DON'T HAVE SUCH AN ARMOR");refresh();attroff(COLOR_PAIR(1));napms(3000);mvprintw(0,0,"___________________________________");}}
+        else if(c=='d'){if(player->armor[1]>0){player->selah_dardast=1;} else{attron(COLOR_PAIR(1));mvprintw(0,0,"YOU DON'T HAVE SUCH AN ARMOR");refresh();attroff(COLOR_PAIR(1));napms(3000);mvprintw(0,0,"___________________________________");}}
+        else if(c=='m'){if(player->armor[0]>0){player->selah_dardast=0;} else{attron(COLOR_PAIR(1));mvprintw(0,0,"YOU DON'T HAVE SUCH AN ARMOR");refresh();attroff(COLOR_PAIR(1));napms(3000);mvprintw(0,0,"___________________________________");}}
+        else if(c=='w'){if(player->armor[2]>0){player->selah_dardast=2;} else{attron(COLOR_PAIR(1));mvprintw(0,0,"YOU DON'T HAVE SUCH AN ARMOR");refresh();attroff(COLOR_PAIR(1));napms(3000);mvprintw(0,0,"___________________________________");}}
         if(t->a[player->xplayer][player->yplayer]=='T'){
             t->a[player->xplayer][player->yplayer]='t';
             Player player2=*player;
-            otaghenabard(&player2);
+            int s=otaghenabard(&player2);
+            if(!s){return 0;}
         }
         if(t->a[player->xplayer][player->yplayer]=='@'){}//dareramzdar();}
         if(t->a[player->xplayer][player->yplayer]=='&'){}//ramzedardar();}
         if(t->a[player->xplayer][player->yplayer]=='R'){t->a[player->xplayer][player->yplayer]='?';}//daremakh();}
+        //////
+        int u=find_otagh(t,player->xplayer,player->yplayer);
+        if(u!=(-1)){
+            room* e=&t->otagh[u];
+            for(int i=0;i<3;i++){
+                if(e->enemies[i].lives<0){e->enemies[i].vojood=0;}
+            }
+        }
+        if(player->health<=0){
 
+            return 0;
+        }
         
+        endloop=time(NULL);
+    }
+    
+    if(bord==0){
+        lose_game();
+        return 0;
+    }
+    if(bord==1){
+        return 1;
+    }
+    if(bord==2){
+        int i=0;
+        while(which_user.games[i].t1.a[2][2]!=0){i++;}
+        which_user.games[i]=*bazi;
+        return 0;
     }
         
     clear();
+}
+
+void lose_game(){
+    int x,y;
+    getmaxyx(stdscr,y,x);
+    mvprintw(y/2,x/2-5,"YOU LOST THE GAME");
+    mvprintw(y/2+1,x/2-10,"PRESS ANY BUTTON TO END THE GAME");
 }
 
 
@@ -807,21 +1355,46 @@ void display_map(tabaghe *t, int sc_height, int sc_width) {
                mvprintw(j, i,"%lc", t->a[i][j]);
                attroff(COLOR_PAIR(1));
             }
-            else if(t->a[i][j]=='P' || t->a[i][j]=='t'){wchar_t e='.';mvprintw(j, i,"%lc", e);}
+            
+            else if(t->a[i][j]=='P' || t->a[i][j]=='t' || t->a[i][j]=='T' || t->a[i][j]=='R'){wchar_t e='.';mvprintw(j, i,"%lc", e);}
             else{mvprintw(j, i,"%lc", t->a[i][j]);}
+            if(bazi->vaziatmaloum){if(t->a[i][j]=='T' || t->a[i][j]=='R'){mvprintw(j, i,"%lc", t->a[i][j]);}}
             if(t->a[i][j]>127){
                i++;
             }
+
         }
     }
     mvprintw(y,x,"P");
+    int u=find_otagh(t,x,y);
+    if(u!=(-1)){
+        room g=t->otagh[u];
+        for(int i=0;i<3;i++){
+            if(g.enemies[i].vojood){
+            mvprintw(g.enemies[i].yplayer,g.enemies[i].xplayer,"%c",g.enemies[i].esm);
+            }
+        }
+    }
     refresh();
 }
 
+
+void game(){
+    main_menu();
+    if(login_status){
+    make_bazi(bazi);
+    int c=keym(bazi);
+    if(c==1){
+        which_user.gold=bazi->player.gold;
+    }
+    save_user_data(which_user);
+    }
+}
 // Main function
 int main() {
+    init_karbar();
    srand(time(NULL));
-    
+    init_pair(1,COLOR_YELLOW,COLOR_BLACK);
    setlocale(LC_ALL, "");
     // Initialize ncurses
    initscr();
@@ -830,8 +1403,12 @@ int main() {
    cbreak();
    curs_set(0);
    start_color();
-   make_bazi(bazi);
-   keym(bazi);
+   which_user.games=malloc(sizeof(bazi)*10);
+   which_user.tajrobe1=0;
+   which_user.tajrobe2=0;
+   which_user.difficulty=1;
+   which_user.character='Y';
+   game();
    int sc_height, sc_width;
    getmaxyx(stdscr, sc_height, sc_width);
   // display_map(&bazi->t1,sc_height,sc_width);
